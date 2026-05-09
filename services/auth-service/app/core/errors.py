@@ -5,13 +5,17 @@ from fastapi.responses import JSONResponse
 class AuthServiceError(Exception):
     status_code = status.HTTP_400_BAD_REQUEST
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, *, headers: dict[str, str] | None = None) -> None:
         super().__init__(message)
         self.message = message
+        self.headers = headers or {}
 
 
 class AuthenticationError(AuthServiceError):
     status_code = status.HTTP_401_UNAUTHORIZED
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, headers={"WWW-Authenticate": "Bearer"})
 
 
 class AuthorizationError(AuthServiceError):
@@ -28,5 +32,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.message},
+            headers=exc.headers,
         )
 

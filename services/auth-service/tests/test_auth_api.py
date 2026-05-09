@@ -1,5 +1,8 @@
 import pytest
 
+from app.core.security import create_access_token
+from app.db.models import User, UserRole
+
 
 @pytest.mark.asyncio
 async def test_register_login_and_fetch_profile(client):
@@ -33,6 +36,25 @@ async def test_register_login_and_fetch_profile(client):
 
 
 @pytest.mark.asyncio
+async def test_protected_route_requires_bearer_token(client):
+    response = await client.get("/api/v1/users/me")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing bearer token."
+
+
+@pytest.mark.asyncio
+async def test_invalid_bearer_token_is_rejected(client):
+    response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired access token."
+
+
+@pytest.mark.asyncio
 async def test_duplicate_registration_is_rejected(client):
     payload = {
         "email": "duplicate@cognimon.dev",
@@ -44,6 +66,37 @@ async def test_duplicate_registration_is_rejected(client):
 
     assert first_response.status_code == 201
     assert second_response.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_inactive_user_token_is_rejected(client, app):
+    async with app.state.db.session_factory() as session:
+        inactive_user = User(
+            email="inactive@cognimon.dev",
+            display_name="Inactive User",
+            password_hash="hashed",
+            role=UserRole.learner,
+            is_active=False,
+        )
+        session.add(inactive_user)
+        await session.commit()
+        await session.refresh(inactive_user)
+
+    token = create_access_token(
+        subject=inactive_user.id,
+        email=inactive_user.email,
+        role=inactive_user.role.value,
+        secret=app.state.settings.jwt_secret,
+        algorithm=app.state.settings.jwt_algorithm,
+        expires_in_minutes=app.state.settings.access_token_expire_minutes,
+    )
+    response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "User could not be authenticated."
 
 
 @pytest.mark.asyncio

@@ -4,12 +4,14 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
-from app.core.errors import register_exception_handlers
+from app.core.errors import AuthServiceError, register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.database import Database
+from app.middleware.jwt import attach_authenticated_user
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +59,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def request_context_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid4()))
-        response = await call_next(request)
+        try:
+            await attach_authenticated_user(request, app_settings)
+            response = await call_next(request)
+        except AuthServiceError as exc:
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.message},
+                headers=exc.headers,
+            )
+        if response.status_code == 401 and "WWW-Authenticate" not in response.headers:
+            response.headers["WWW-Authenticate"] = app_settings.jwt_scheme
         response.headers["X-Request-ID"] = request_id
+        current_user = getattr(request.state, "authenticated_user", None)
+        current_user_id = getattr(current_user, "id", "anonymous")
         logger.info(
-            "request_id=%s method=%s path=%s status=%s",
+            "request_id=%s user_id=%s method=%s path=%s status=%s",
             request_id,
+            current_user_id,
             request.method,
             request.url.path,
             response.status_code,

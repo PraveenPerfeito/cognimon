@@ -1,18 +1,14 @@
 from collections.abc import AsyncIterator, Callable
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.errors import AuthenticationError, AuthorizationError
-from app.core.security import decode_access_token
 from app.db.models import User, UserRole
 from app.messaging.noop import NoopAuthEventPublisher
 from app.repositories.users import UserRepository
 from app.services.auth_service import AuthService
-
-bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_settings(request: Request) -> Settings:
@@ -33,25 +29,11 @@ def get_auth_service() -> AuthService:
 
 
 async def get_current_user(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    request: Request,
 ) -> User:
-    if credentials is None:
+    user = getattr(request.state, "authenticated_user", None)
+    if user is None:
         raise AuthenticationError("Missing bearer token.")
-
-    payload = decode_access_token(
-        token=credentials.credentials,
-        secret=settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
-    subject = payload.get("sub")
-    if not subject:
-        raise AuthenticationError("Malformed token payload.")
-
-    user = await UserRepository().get_by_id(session, subject)
-    if user is None or not user.is_active:
-        raise AuthenticationError("User could not be authenticated.")
     return user
 
 
@@ -72,11 +54,3 @@ def require_roles(*allowed_roles: UserRole | str) -> Callable[[User], User]:
         return current_user
 
     return dependency
-
-
-def as_http_exception(exc: AuthenticationError | AuthorizationError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=str(exc),
-        headers={"WWW-Authenticate": "Bearer"},
-    )

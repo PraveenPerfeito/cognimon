@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://brainmon:brainmon@localhost:5432/brainmon_auth"
     jwt_secret: str = "change-me-before-production-32-chars"
     jwt_algorithm: str = "HS256"
+    jwt_header_name: str = "Authorization"
+    jwt_scheme: str = "Bearer"
     access_token_expire_minutes: int = 60
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     bootstrap_schema: bool = False
