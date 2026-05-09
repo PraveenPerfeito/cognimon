@@ -35,7 +35,15 @@ class UserRepository:
         await session.refresh(user)
         return user
 
-    async def update_last_login(self, session: AsyncSession, user: User) -> User:
+    async def record_successful_login(
+        self,
+        session: AsyncSession,
+        user: User,
+        *,
+        password_hash: str | None = None,
+    ) -> User:
+        if password_hash is not None:
+            user.password_hash = password_hash
         user.last_login_at = datetime.now(UTC)
         await session.commit()
         await session.refresh(user)

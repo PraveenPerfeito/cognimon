@@ -4,6 +4,8 @@ The auth service is the first production-ready backend slice for Cognimon. It pr
 
 Incoming bearer tokens are validated in request middleware before protected route dependencies run, which keeps route handlers focused on business behavior instead of token parsing.
 
+Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
@@ -27,6 +29,10 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_ALGORITHM`
 - `AUTH_SERVICE_JWT_HEADER_NAME`
 - `AUTH_SERVICE_JWT_SCHEME`
+
+## Password Hashing Configuration
+
+- `AUTH_SERVICE_PASSWORD_PEPPER`
 
 ## Testing
 

@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.security import create_access_token
+from app.core.security import create_access_token, hash_password, verify_password
 from app.db.models import User, UserRole
 
 
@@ -97,6 +97,53 @@ async def test_inactive_user_token_is_rejected(client, app):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "User could not be authenticated."
+
+
+@pytest.mark.asyncio
+async def test_login_rehashes_legacy_password_hash(client, app):
+    legacy_user_password = "LegacyPass123"
+    async with app.state.db.session_factory() as session:
+        legacy_user = User(
+            email="legacy-user@cognimon.dev",
+            display_name="Legacy User",
+            password_hash=hash_password(legacy_user_password),
+            role=UserRole.learner,
+        )
+        session.add(legacy_user)
+        await session.commit()
+        await session.refresh(legacy_user)
+        legacy_hash_before_login = legacy_user.password_hash
+
+    app.state.settings.password_pepper = "login-pepper"
+
+    async with app.state.db.session_factory() as session:
+        user_to_upgrade = await session.get(User, legacy_user.id)
+        user_to_upgrade.password_hash = hash_password(legacy_user_password, pepper="")
+        await session.commit()
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": legacy_user.email,
+            "password": legacy_user_password,
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    async with app.state.db.session_factory() as session:
+        upgraded_user = await session.get(User, legacy_user.id)
+        assert upgraded_user.password_hash != legacy_hash_before_login
+        assert verify_password(
+            legacy_user_password,
+            upgraded_user.password_hash,
+            pepper="login-pepper",
+        )
+        assert not verify_password(
+            legacy_user_password,
+            upgraded_user.password_hash,
+            pepper="",
+        )
 
 
 @pytest.mark.asyncio
