@@ -4,6 +4,8 @@ The auth service is the first production-ready backend slice for Cognimon. It pr
 
 Incoming bearer tokens are validated in request middleware before protected route dependencies run, which keeps route handlers focused on business behavior instead of token parsing.
 
+Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
@@ -18,7 +20,7 @@ Incoming bearer tokens are validated in request middleware before protected rout
 
 ```bash
 pip install .[dev]
-python -m app.bootstrap
+alembic upgrade head
 uvicorn app.main:app --reload --port 8080
 ```
 
@@ -34,12 +36,25 @@ uvicorn app.main:app --reload --port 8080
 
 Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks request counts and request duration by method, route path, and status code.
 
+## Password Hashing Configuration
+
+- `AUTH_SERVICE_PASSWORD_PEPPER`
+
 ## Testing
 
 ```bash
 pytest
 ruff check app tests
 ```
+
+## Database Migrations
+
+```bash
+alembic upgrade head
+alembic downgrade -1
+```
+
+The Alembic environment reads `AUTH_SERVICE_DATABASE_URL` when it is set, so local, CI, and container environments can run the same migration commands against different databases.
 
 ## Continuous Integration
 
@@ -49,6 +64,8 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 1. Add refresh tokens and logout revocation.
 2. Publish auth domain events to a real broker.
+
+
 3. Add password reset workflow.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add Grafana dashboards for auth-service metrics.

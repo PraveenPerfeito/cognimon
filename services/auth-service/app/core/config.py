@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     jwt_header_name: str = "Authorization"
     jwt_scheme: str = "Bearer"
     metrics_enabled: bool = True
+    password_pepper: str = ""
     access_token_expire_minutes: int = 60
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     bootstrap_schema: bool = False

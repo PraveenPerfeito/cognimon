@@ -21,10 +21,11 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
         yield session
 
 
-def get_auth_service() -> AuthService:
+def get_auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
     return AuthService(
         user_repository=UserRepository(),
         event_publisher=NoopAuthEventPublisher(),
+        password_pepper=settings.password_pepper,
     )
 
 
