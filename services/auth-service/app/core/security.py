@@ -19,12 +19,40 @@ class AccessTokenClaims:
     expires_at: int
 
 
-def hash_password(password: str) -> str:
-    return password_hash.hash(password)
+def _apply_password_pepper(password: str, pepper: str) -> str:
+    return f"{password}{pepper}" if pepper else password
 
 
-def verify_password(password: str, hashed_password: str) -> bool:
-    return password_hash.verify(password, hashed_password)
+def hash_password(password: str, *, pepper: str = "") -> str:
+    return password_hash.hash(_apply_password_pepper(password, pepper))
+
+
+def verify_password(password: str, hashed_password: str, *, pepper: str = "") -> bool:
+    return password_hash.verify(_apply_password_pepper(password, pepper), hashed_password)
+
+
+def verify_and_rehash_password(
+    password: str,
+    hashed_password: str,
+    *,
+    pepper: str = "",
+) -> tuple[bool, str | None]:
+    peppered_password = _apply_password_pepper(password, pepper)
+    password_is_valid, upgraded_hash = password_hash.verify_and_update(
+        peppered_password,
+        hashed_password,
+    )
+    if password_is_valid:
+        return password_is_valid, upgraded_hash
+
+    if not pepper:
+        return False, None
+
+    legacy_password_is_valid, _ = password_hash.verify_and_update(password, hashed_password)
+    if not legacy_password_is_valid:
+        return False, None
+
+    return True, hash_password(password, pepper=pepper)
 
 
 def create_access_token(
