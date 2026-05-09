@@ -26,10 +26,14 @@ pytest
 ruff check app tests
 ```
 
+## Continuous Integration
+
+The repository includes an `auth-service-ci` GitHub Actions workflow that runs Ruff, pytest, and a Docker image build when auth-service files change.
+
 ## Follow-up PRs
 
 1. Add refresh tokens and logout revocation.
 2. Publish auth domain events to a real broker.
 3. Add PostgreSQL migration tooling and schema rollout jobs.
-4. Add GitHub Actions CI for auth-service.
-5. Add Kubernetes deployment manifests for auth-service.
+4. Add Kubernetes deployment manifests for auth-service.
+5. Add deployment promotion checks for auth-service images.
