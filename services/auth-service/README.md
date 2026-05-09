@@ -15,7 +15,7 @@ The auth service is the first production-ready backend slice for Cognimon. It pr
 
 ```bash
 pip install .[dev]
-python -m app.bootstrap
+alembic upgrade head
 uvicorn app.main:app --reload --port 8080
 ```
 
@@ -26,6 +26,15 @@ pytest
 ruff check app tests
 ```
 
+## Database Migrations
+
+```bash
+alembic upgrade head
+alembic downgrade -1
+```
+
+The Alembic environment reads `AUTH_SERVICE_DATABASE_URL` when it is set, so local, CI, and container environments can run the same migration commands against different databases.
+
 ## Continuous Integration
 
 The repository includes an `auth-service-ci` GitHub Actions workflow that runs Ruff, pytest, and a Docker image build when auth-service files change.
@@ -34,6 +43,6 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 1. Add refresh tokens and logout revocation.
 2. Publish auth domain events to a real broker.
-3. Add PostgreSQL migration tooling and schema rollout jobs.
+3. Add schema rollout jobs for deployment environments.
 4. Add Kubernetes deployment manifests for auth-service.
 5. Add deployment promotion checks for auth-service images.
