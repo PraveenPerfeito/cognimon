@@ -1,0 +1,1 @@
+"""Cognimon auth service package."""
