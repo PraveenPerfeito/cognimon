@@ -2,6 +2,8 @@
 
 The auth service is the first production-ready backend slice for Cognimon. It provides JWT access tokens, RBAC enforcement, user registration, and profile APIs while establishing the service pattern the rest of the platform will follow.
 
+Incoming bearer tokens are validated in request middleware before protected route dependencies run, which keeps route handlers focused on business behavior instead of token parsing.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
@@ -19,6 +21,13 @@ python -m app.bootstrap
 uvicorn app.main:app --reload --port 8080
 ```
 
+## JWT Configuration
+
+- `AUTH_SERVICE_JWT_SECRET`
+- `AUTH_SERVICE_JWT_ALGORITHM`
+- `AUTH_SERVICE_JWT_HEADER_NAME`
+- `AUTH_SERVICE_JWT_SCHEME`
+
 ## Testing
 
 ```bash
@@ -34,6 +43,6 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 1. Add refresh tokens and logout revocation.
 2. Publish auth domain events to a real broker.
-3. Add PostgreSQL migration tooling and schema rollout jobs.
-4. Add Kubernetes deployment manifests for auth-service.
-5. Add deployment promotion checks for auth-service images.
+3. Add password reset workflow.
+4. Add PostgreSQL migration tooling and schema rollout jobs.
+5. Add Kubernetes deployment manifests for auth-service.
