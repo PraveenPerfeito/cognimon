@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -12,6 +13,7 @@ from app.core.errors import AuthServiceError, register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.database import Database
 from app.middleware.jwt import attach_authenticated_user
+from app.observability.metrics import ServiceMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = app_settings
     app.state.db = database
+    app.state.metrics = (
+        ServiceMetrics(app_settings.project_name)
+        if app_settings.metrics_enabled
+        else None
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -59,6 +66,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def request_context_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid4()))
+        started_at = perf_counter()
+        response = None
         try:
             await attach_authenticated_user(request, app_settings)
             response = await call_next(request)
@@ -68,9 +77,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 content={"detail": exc.message},
                 headers=exc.headers,
             )
-        if response.status_code == 401 and "WWW-Authenticate" not in response.headers:
+        status_code = response.status_code if response is not None else 500
+        if (
+            response is not None
+            and response.status_code == 401
+            and "WWW-Authenticate" not in response.headers
+        ):
             response.headers["WWW-Authenticate"] = app_settings.jwt_scheme
         response.headers["X-Request-ID"] = request_id
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", request.url.path)
+        if app.state.metrics is not None:
+            app.state.metrics.observe_request(
+                method=request.method,
+                path=route_path,
+                status_code=status_code,
+                duration_seconds=perf_counter() - started_at,
+            )
         current_user = getattr(request.state, "authenticated_user", None)
         current_user_id = getattr(current_user, "id", "anonymous")
         logger.info(
@@ -79,7 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             current_user_id,
             request.method,
             request.url.path,
-            response.status_code,
+            status_code,
         )
         return response
 
