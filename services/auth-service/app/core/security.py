@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 import jwt
 from pwdlib import PasswordHash
@@ -15,6 +16,7 @@ class TokenClaims:
     subject: str
     email: str
     role: str
+    token_id: str
     issued_at: int
     expires_at: int
     token_use: str
@@ -71,6 +73,7 @@ def _create_token(
         "sub": subject,
         "email": email,
         "role": role,
+        "jti": str(uuid4()),
         "token_use": token_use,
         "iat": int(issued_at.timestamp()),
         "exp": int((issued_at + expires_delta).timestamp()),
@@ -144,10 +147,11 @@ def _decode_token(
     subject = payload.get("sub")
     email = payload.get("email")
     role = payload.get("role")
+    token_id = payload.get("jti")
     token_use = payload.get("token_use")
     issued_at = payload.get("iat")
     expires_at = payload.get("exp")
-    if not all([subject, email, role, token_use, issued_at, expires_at]):
+    if not all([subject, email, role, token_id, token_use, issued_at, expires_at]):
         raise AuthenticationError("Malformed token payload.")
     if token_use != expected_token_use:
         raise AuthenticationError(invalid_token_message)
@@ -156,6 +160,7 @@ def _decode_token(
         subject=subject,
         email=email,
         role=role,
+        token_id=token_id,
         issued_at=int(issued_at),
         expires_at=int(expires_at),
         token_use=token_use,

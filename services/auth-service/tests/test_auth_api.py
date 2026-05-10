@@ -130,6 +130,42 @@ async def test_access_token_cannot_refresh_session(client):
 
 
 @pytest.mark.asyncio
+async def test_logout_revokes_refresh_token(client):
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "logout@cognimon.dev",
+            "display_name": "Logout User",
+            "password": "StrongPass123",
+        },
+    )
+    assert register_response.status_code == 201
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "logout@cognimon.dev",
+            "password": "StrongPass123",
+        },
+    )
+    refresh_token = login_response.json()["refresh_token"]
+
+    logout_response = await client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": refresh_token},
+    )
+    assert logout_response.status_code == 200
+    assert logout_response.json()["detail"] == "Refresh token revoked."
+
+    refresh_response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh_response.status_code == 401
+    assert refresh_response.json()["detail"] == "Refresh token has been revoked."
+
+
+@pytest.mark.asyncio
 async def test_duplicate_registration_is_rejected(client):
     payload = {
         "email": "duplicate@cognimon.dev",
