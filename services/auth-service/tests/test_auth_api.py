@@ -1,6 +1,11 @@
 import pytest
 
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+)
 from app.db.models import User, UserRole
 
 
@@ -26,6 +31,8 @@ async def test_register_login_and_fetch_profile(client):
     )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
+    refresh_token = login_response.json()["refresh_token"]
+    assert login_response.json()["refresh_expires_in"] > login_response.json()["expires_in"]
 
     profile_response = await client.get(
         "/api/v1/users/me",
@@ -33,6 +40,14 @@ async def test_register_login_and_fetch_profile(client):
     )
     assert profile_response.status_code == 200
     assert profile_response.json()["email"] == "learner@cognimon.dev"
+
+    refresh_response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh_response.status_code == 200
+    assert refresh_response.json()["access_token"]
+    assert refresh_response.json()["refresh_token"]
 
 
 @pytest.mark.asyncio
@@ -52,6 +67,66 @@ async def test_invalid_bearer_token_is_rejected(client):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid or expired access token."
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_cannot_access_protected_route(client):
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "refresh-only@cognimon.dev",
+            "display_name": "Refresh Only",
+            "password": "StrongPass123",
+        },
+    )
+    assert register_response.status_code == 201
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "refresh-only@cognimon.dev",
+            "password": "StrongPass123",
+        },
+    )
+    refresh_token = login_response.json()["refresh_token"]
+
+    response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {refresh_token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired access token."
+
+
+@pytest.mark.asyncio
+async def test_access_token_cannot_refresh_session(client):
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "access-only@cognimon.dev",
+            "display_name": "Access Only",
+            "password": "StrongPass123",
+        },
+    )
+    assert register_response.status_code == 201
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "access-only@cognimon.dev",
+            "password": "StrongPass123",
+        },
+    )
+    access_token = login_response.json()["access_token"]
+
+    response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": access_token},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired refresh token."
 
 
 @pytest.mark.asyncio
@@ -93,6 +168,37 @@ async def test_inactive_user_token_is_rejected(client, app):
     response = await client.get(
         "/api/v1/users/me",
         headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "User could not be authenticated."
+
+
+@pytest.mark.asyncio
+async def test_inactive_user_refresh_token_is_rejected(client, app):
+    async with app.state.db.session_factory() as session:
+        inactive_user = User(
+            email="inactive-refresh@cognimon.dev",
+            display_name="Inactive Refresh User",
+            password_hash="hashed",
+            role=UserRole.learner,
+            is_active=False,
+        )
+        session.add(inactive_user)
+        await session.commit()
+        await session.refresh(inactive_user)
+
+    refresh_token = create_refresh_token(
+        subject=inactive_user.id,
+        email=inactive_user.email,
+        role=inactive_user.role.value,
+        secret=app.state.settings.refresh_token_secret or app.state.settings.jwt_secret,
+        algorithm=app.state.settings.jwt_algorithm,
+        expires_in_days=app.state.settings.refresh_token_expire_days,
+    )
+    response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
     )
 
     assert response.status_code == 401

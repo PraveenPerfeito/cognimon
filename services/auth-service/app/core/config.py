@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_header_name: str = "Authorization"
     jwt_scheme: str = "Bearer"
+    refresh_token_secret: str = ""
+    refresh_token_expire_days: int = 14
     metrics_enabled: bool = True
     password_pepper: str = ""
     access_token_expire_minutes: int = 60
