@@ -26,6 +26,7 @@ def get_auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
         user_repository=UserRepository(),
         event_publisher=NoopAuthEventPublisher(),
         password_pepper=settings.password_pepper,
+        audit_log_enabled=settings.audit_log_enabled,
     )
 
 

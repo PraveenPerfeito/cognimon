@@ -6,6 +6,8 @@ Incoming bearer tokens are validated in request middleware before protected rout
 
 Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
 
+The service also emits structured auth audit logs for registration and login outcomes so security-sensitive identity flows are observable without querying application state.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
@@ -31,6 +33,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_HEADER_NAME`
 - `AUTH_SERVICE_JWT_SCHEME`
 - `AUTH_SERVICE_METRICS_ENABLED`
+- `AUTH_SERVICE_AUDIT_LOG_ENABLED`
 
 ## Metrics
 
@@ -39,6 +42,15 @@ Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks requ
 ## Password Hashing Configuration
 
 - `AUTH_SERVICE_PASSWORD_PEPPER`
+
+## Audit Logging
+
+When `AUTH_SERVICE_AUDIT_LOG_ENABLED=true`, the service emits structured `app.audit` log entries for:
+
+- successful registrations
+- duplicate registration attempts
+- successful logins
+- failed login attempts
 
 ## Testing
 
