@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import select
 
 from app.core.security import (
     create_access_token,
@@ -6,7 +7,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.models import User, UserRole
+from app.db.models import PasswordResetToken, User, UserRole
 
 
 @pytest.mark.asyncio
@@ -127,6 +128,54 @@ async def test_access_token_cannot_refresh_session(client):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid or expired refresh token."
+
+
+@pytest.mark.asyncio
+async def test_password_reset_request_creates_token_for_active_user(client, app):
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "reset-me@cognimon.dev",
+            "display_name": "Reset Me",
+            "password": "StrongPass123",
+        },
+    )
+    assert register_response.status_code == 201
+
+    response = await client.post(
+        "/api/v1/auth/password-reset/request",
+        json={"email": "reset-me@cognimon.dev"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["detail"] == (
+        "If an active account exists for that email, a reset token has been issued."
+    )
+
+    async with app.state.db.session_factory() as session:
+        result = await session.execute(select(PasswordResetToken))
+        reset_tokens = list(result.scalars().all())
+        assert len(reset_tokens) == 1
+        assert reset_tokens[0].token_hash
+        assert reset_tokens[0].expires_at is not None
+
+
+@pytest.mark.asyncio
+async def test_password_reset_request_is_neutral_for_missing_user(client, app):
+    response = await client.post(
+        "/api/v1/auth/password-reset/request",
+        json={"email": "missing@cognimon.dev"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["detail"] == (
+        "If an active account exists for that email, a reset token has been issued."
+    )
+
+    async with app.state.db.session_factory() as session:
+        result = await session.execute(select(PasswordResetToken))
+        reset_tokens = list(result.scalars().all())
+        assert reset_tokens == []
 
 
 @pytest.mark.asyncio

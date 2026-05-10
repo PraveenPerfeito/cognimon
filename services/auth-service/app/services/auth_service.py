@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -6,13 +8,16 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
+    generate_password_reset_token,
     hash_password,
+    hash_password_reset_token,
     verify_and_rehash_password,
 )
-from app.db.models import User, UserRole
+from app.db.models import PasswordResetToken, User, UserRole
 from app.messaging.contracts import AuthEventPublisher, UserRegisteredEvent
+from app.repositories.password_reset_tokens import PasswordResetTokenRepository
 from app.repositories.users import UserRepository
-from app.schemas.auth import RegisterRequest
+from app.schemas.auth import PasswordResetRequest, RegisterRequest
 
 
 class AuthService:
@@ -20,10 +25,12 @@ class AuthService:
         self,
         *,
         user_repository: UserRepository,
+        password_reset_token_repository: PasswordResetTokenRepository,
         event_publisher: AuthEventPublisher,
         password_pepper: str = "",
     ) -> None:
         self.user_repository = user_repository
+        self.password_reset_token_repository = password_reset_token_repository
         self.event_publisher = event_publisher
         self.password_pepper = password_pepper
 
@@ -104,4 +111,23 @@ class AuthService:
         if user is None or not user.is_active:
             raise AuthenticationError("User could not be authenticated.")
         return user
+
+    async def request_password_reset(
+        self,
+        session: AsyncSession,
+        payload: PasswordResetRequest,
+        settings: Settings,
+    ) -> PasswordResetToken | None:
+        user = await self.user_repository.get_by_email(session, payload.email)
+        if user is None or not user.is_active:
+            return None
+
+        reset_token = generate_password_reset_token()
+        return await self.password_reset_token_repository.create_token(
+            session,
+            user_id=user.id,
+            token_hash=hash_password_reset_token(reset_token),
+            expires_at=datetime.now(UTC)
+            + timedelta(minutes=settings.password_reset_token_expire_minutes),
+        )
 

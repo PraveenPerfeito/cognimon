@@ -3,7 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_auth_service, get_session, get_settings
 from app.core.config import Settings
-from app.schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, TokenPairResponse
+from app.schemas.auth import (
+    LoginRequest,
+    PasswordResetRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenPairResponse,
+)
+from app.schemas.common import MessageResponse
 from app.schemas.user import UserProfileResponse
 from app.services.auth_service import AuthService
 
@@ -37,6 +44,23 @@ async def login_user(
         refresh_token=auth_service.issue_refresh_token(user, settings),
         expires_in=settings.access_token_expire_minutes * 60,
         refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
+    )
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_password_reset(
+    payload: PasswordResetRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> MessageResponse:
+    await auth_service.request_password_reset(session, payload, settings)
+    return MessageResponse(
+        detail="If an active account exists for that email, a reset token has been issued."
     )
 
 

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     metrics_enabled: bool = True
     password_pepper: str = ""
     access_token_expire_minutes: int = 60
+    password_reset_token_expire_minutes: int = 30
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     bootstrap_schema: bool = False
 

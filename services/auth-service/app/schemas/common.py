@@ -5,3 +5,7 @@ class HealthResponse(BaseModel):
     status: str
     service: str
 
+
+class MessageResponse(BaseModel):
+    detail: str
+

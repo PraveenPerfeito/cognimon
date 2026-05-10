@@ -8,11 +8,14 @@ Passwords are hashed with Argon2 through `pwdlib`, and the service can optionall
 
 Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
 
+Password reset is split into incremental steps. This service now accepts reset requests and stores hashed reset tokens with expiry while returning a neutral response that does not disclose whether an account exists.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/password-reset/request`
 - `GET /api/v1/users/me`
 - `GET /api/v1/users/admin`
 - `GET /api/v1/metrics`
@@ -44,6 +47,7 @@ Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks requ
 ## Password Hashing Configuration
 
 - `AUTH_SERVICE_PASSWORD_PEPPER`
+- `AUTH_SERVICE_PASSWORD_RESET_TOKEN_EXPIRE_MINUTES`
 
 ## Testing
 
@@ -69,6 +73,6 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 1. Add refresh token revocation and logout tracking.
 2. Publish auth domain events to a real broker.
-3. Add password reset workflow.
+3. Add password reset confirmation endpoint.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add Grafana dashboards for auth-service metrics.
