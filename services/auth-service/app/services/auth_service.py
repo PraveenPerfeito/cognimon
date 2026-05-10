@@ -4,6 +4,8 @@ from app.core.config import Settings
 from app.core.errors import AuthenticationError, ConflictError
 from app.core.security import (
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     hash_password,
     verify_and_rehash_password,
 )
@@ -74,4 +76,32 @@ class AuthService:
             algorithm=settings.jwt_algorithm,
             expires_in_minutes=settings.access_token_expire_minutes,
         )
+
+    def issue_refresh_token(self, user: User, settings: Settings) -> str:
+        refresh_secret = settings.refresh_token_secret or settings.jwt_secret
+        return create_refresh_token(
+            subject=user.id,
+            email=user.email,
+            role=user.role.value,
+            secret=refresh_secret,
+            algorithm=settings.jwt_algorithm,
+            expires_in_days=settings.refresh_token_expire_days,
+        )
+
+    async def authenticate_refresh_token(
+        self,
+        session: AsyncSession,
+        refresh_token: str,
+        settings: Settings,
+    ) -> User:
+        refresh_secret = settings.refresh_token_secret or settings.jwt_secret
+        claims = decode_refresh_token(
+            token=refresh_token,
+            secret=refresh_secret,
+            algorithm=settings.jwt_algorithm,
+        )
+        user = await self.user_repository.get_by_id(session, claims.subject)
+        if user is None or not user.is_active:
+            raise AuthenticationError("User could not be authenticated.")
+        return user
 

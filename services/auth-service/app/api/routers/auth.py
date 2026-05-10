@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_auth_service, get_session, get_settings
 from app.core.config import Settings
-from app.schemas.auth import AccessTokenResponse, LoginRequest, RegisterRequest
+from app.schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, TokenPairResponse
 from app.schemas.user import UserProfileResponse
 from app.services.auth_service import AuthService
 
@@ -24,17 +24,38 @@ async def register_user(
     return UserProfileResponse.model_validate(user)
 
 
-@router.post("/login", response_model=AccessTokenResponse)
+@router.post("/login", response_model=TokenPairResponse)
 async def login_user(
     payload: LoginRequest,
     session: AsyncSession = Depends(get_session),
     auth_service: AuthService = Depends(get_auth_service),
     settings: Settings = Depends(get_settings),
-) -> AccessTokenResponse:
+) -> TokenPairResponse:
     user = await auth_service.authenticate_user(session, payload.email, payload.password)
-    token = auth_service.issue_access_token(user, settings)
-    return AccessTokenResponse(
-        access_token=token,
+    return TokenPairResponse(
+        access_token=auth_service.issue_access_token(user, settings),
+        refresh_token=auth_service.issue_refresh_token(user, settings),
         expires_in=settings.access_token_expire_minutes * 60,
+        refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
+    )
+
+
+@router.post("/refresh", response_model=TokenPairResponse)
+async def refresh_user_token(
+    payload: RefreshTokenRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> TokenPairResponse:
+    user = await auth_service.authenticate_refresh_token(
+        session,
+        payload.refresh_token,
+        settings,
+    )
+    return TokenPairResponse(
+        access_token=auth_service.issue_access_token(user, settings),
+        refresh_token=auth_service.issue_refresh_token(user, settings),
+        expires_in=settings.access_token_expire_minutes * 60,
+        refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 

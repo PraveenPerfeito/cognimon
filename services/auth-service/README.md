@@ -6,10 +6,13 @@ Incoming bearer tokens are validated in request middleware before protected rout
 
 Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
 
+Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
 - `GET /api/v1/users/me`
 - `GET /api/v1/users/admin`
 - `GET /api/v1/metrics`
@@ -30,6 +33,8 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_ALGORITHM`
 - `AUTH_SERVICE_JWT_HEADER_NAME`
 - `AUTH_SERVICE_JWT_SCHEME`
+- `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
+- `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
 - `AUTH_SERVICE_METRICS_ENABLED`
 
 ## Metrics
@@ -62,10 +67,8 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 ## Follow-up PRs
 
-1. Add refresh tokens and logout revocation.
+1. Add refresh token revocation and logout tracking.
 2. Publish auth domain events to a real broker.
-
-
 3. Add password reset workflow.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add Grafana dashboards for auth-service metrics.
