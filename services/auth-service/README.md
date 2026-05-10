@@ -41,6 +41,8 @@ uvicorn app.main:app --reload --port 8080
 
 Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks request counts and request duration by method, route path, and status code.
 
+Baseline Prometheus Operator alert rules for auth-service can be applied from `monitoring/auth-service/`.
+
 ## Password Hashing Configuration
 
 - `AUTH_SERVICE_PASSWORD_PEPPER`
@@ -64,6 +66,19 @@ The Alembic environment reads `AUTH_SERVICE_DATABASE_URL` when it is set, so loc
 ## Continuous Integration
 
 The repository includes an `auth-service-ci` GitHub Actions workflow that runs Ruff, pytest, and a Docker image build when auth-service files change.
+
+## Monitoring
+
+Apply the baseline alert rules with:
+
+```bash
+kubectl apply -k monitoring/auth-service
+```
+
+The bundled `PrometheusRule` includes:
+
+- `AuthServiceHigh5xxRate`
+- `AuthServicePodsUnavailable`
 
 ## Follow-up PRs
 
