@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -11,6 +13,7 @@ from app.core.security import (
 )
 from app.db.models import User, UserRole
 from app.messaging.contracts import AuthEventPublisher, UserRegisteredEvent
+from app.repositories.revoked_refresh_tokens import RevokedRefreshTokenRepository
 from app.repositories.users import UserRepository
 from app.schemas.auth import RegisterRequest
 
@@ -20,10 +23,12 @@ class AuthService:
         self,
         *,
         user_repository: UserRepository,
+        revoked_refresh_token_repository: RevokedRefreshTokenRepository,
         event_publisher: AuthEventPublisher,
         password_pepper: str = "",
     ) -> None:
         self.user_repository = user_repository
+        self.revoked_refresh_token_repository = revoked_refresh_token_repository
         self.event_publisher = event_publisher
         self.password_pepper = password_pepper
 
@@ -100,8 +105,29 @@ class AuthService:
             secret=refresh_secret,
             algorithm=settings.jwt_algorithm,
         )
+        if await self.revoked_refresh_token_repository.is_token_revoked(session, claims.token_id):
+            raise AuthenticationError("Refresh token has been revoked.")
         user = await self.user_repository.get_by_id(session, claims.subject)
         if user is None or not user.is_active:
             raise AuthenticationError("User could not be authenticated.")
         return user
+
+    async def revoke_refresh_token(
+        self,
+        session: AsyncSession,
+        refresh_token: str,
+        settings: Settings,
+    ) -> None:
+        refresh_secret = settings.refresh_token_secret or settings.jwt_secret
+        claims = decode_refresh_token(
+            token=refresh_token,
+            secret=refresh_secret,
+            algorithm=settings.jwt_algorithm,
+        )
+        await self.revoked_refresh_token_repository.revoke_token(
+            session,
+            token_id=claims.token_id,
+            user_id=claims.subject,
+            expires_at=datetime.fromtimestamp(claims.expires_at, tz=UTC),
+        )
 
