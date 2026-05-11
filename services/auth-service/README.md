@@ -71,6 +71,21 @@ The Alembic environment reads `AUTH_SERVICE_DATABASE_URL` when it is set, so loc
 
 The repository includes an `auth-service-ci` GitHub Actions workflow that runs Ruff, pytest, and a Docker image build when auth-service files change.
 
+## Kubernetes
+
+Baseline Kubernetes manifests for the service live in `kubernetes/auth-service/`.
+
+Apply them with:
+
+```bash
+kubectl apply -k kubernetes/auth-service
+```
+
+Before applying, create a secret named `auth-service-secrets` with at least:
+
+- `AUTH_SERVICE_DATABASE_URL`
+- `AUTH_SERVICE_JWT_SECRET`
+- `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 ## Monitoring
 
 Apply the baseline alert rules with:
