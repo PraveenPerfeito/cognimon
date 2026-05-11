@@ -5,6 +5,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 
 
+def test_alembic_upgrade_creates_users_and_password_reset_token_tables() -> None:
 def test_alembic_upgrade_creates_users_and_revoked_refresh_token_tables() -> None:
     service_root = Path(__file__).resolve().parent.parent
     database_path = service_root / "tests" / "auth-service-migrations.db"
@@ -23,6 +24,19 @@ def test_alembic_upgrade_creates_users_and_revoked_refresh_token_tables() -> Non
             inspector = inspect(engine)
 
             assert "users" in inspector.get_table_names()
+            assert "password_reset_tokens" in inspector.get_table_names()
+            column_names = {column["name"] for column in inspector.get_columns("users")}
+            assert {"id", "email", "display_name", "password_hash", "role"} <= column_names
+            reset_column_names = {
+                column["name"] for column in inspector.get_columns("password_reset_tokens")
+            }
+            assert {
+                "id",
+                "user_id",
+                "token_hash",
+                "expires_at",
+                "consumed_at",
+            } <= reset_column_names
             assert "revoked_refresh_tokens" in inspector.get_table_names()
             column_names = {column["name"] for column in inspector.get_columns("users")}
             assert {"id", "email", "display_name", "password_hash", "role"} <= column_names

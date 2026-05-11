@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -185,4 +187,12 @@ def decode_refresh_token(*, token: str, secret: str, algorithm: str) -> TokenCla
         expected_token_use="refresh",
         invalid_token_message="Invalid or expired refresh token.",
     )
+
+
+def generate_password_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_password_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

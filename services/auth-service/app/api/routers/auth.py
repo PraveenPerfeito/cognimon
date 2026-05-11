@@ -5,6 +5,7 @@ from app.api.deps import get_auth_service, get_session, get_settings
 from app.core.config import Settings
 from app.schemas.auth import (
     LoginRequest,
+    PasswordResetRequest,
     LogoutRequest,
     RefreshTokenRequest,
     RegisterRequest,
@@ -47,6 +48,13 @@ async def login_user(
     )
 
 
+@router.post(
+    "/password-reset/request",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_password_reset(
+    payload: PasswordResetRequest,
 @router.post("/logout", response_model=MessageResponse)
 async def logout_user(
     payload: LogoutRequest,
@@ -54,6 +62,10 @@ async def logout_user(
     auth_service: AuthService = Depends(get_auth_service),
     settings: Settings = Depends(get_settings),
 ) -> MessageResponse:
+    await auth_service.request_password_reset(session, payload, settings)
+    return MessageResponse(
+        detail="If an active account exists for that email, a reset token has been issued."
+    )
     await auth_service.revoke_refresh_token(session, payload.refresh_token, settings)
     return MessageResponse(detail="Refresh token revoked.")
 
