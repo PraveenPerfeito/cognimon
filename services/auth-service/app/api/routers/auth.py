@@ -6,6 +6,7 @@ from app.core.config import Settings
 from app.schemas.auth import (
     LoginRequest,
     PasswordResetRequest,
+    LogoutRequest,
     RefreshTokenRequest,
     RegisterRequest,
     TokenPairResponse,
@@ -54,6 +55,9 @@ async def login_user(
 )
 async def request_password_reset(
     payload: PasswordResetRequest,
+@router.post("/logout", response_model=MessageResponse)
+async def logout_user(
+    payload: LogoutRequest,
     session: AsyncSession = Depends(get_session),
     auth_service: AuthService = Depends(get_auth_service),
     settings: Settings = Depends(get_settings),
@@ -62,6 +66,8 @@ async def request_password_reset(
     return MessageResponse(
         detail="If an active account exists for that email, a reset token has been issued."
     )
+    await auth_service.revoke_refresh_token(session, payload.refresh_token, settings)
+    return MessageResponse(detail="Refresh token revoked.")
 
 
 @router.post("/refresh", response_model=TokenPairResponse)

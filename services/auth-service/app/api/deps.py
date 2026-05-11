@@ -8,6 +8,7 @@ from app.core.errors import AuthenticationError, AuthorizationError
 from app.db.models import User, UserRole
 from app.messaging.noop import NoopAuthEventPublisher
 from app.repositories.password_reset_tokens import PasswordResetTokenRepository
+from app.repositories.revoked_refresh_tokens import RevokedRefreshTokenRepository
 from app.repositories.users import UserRepository
 from app.services.auth_service import AuthService
 
@@ -26,6 +27,7 @@ def get_auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
     return AuthService(
         user_repository=UserRepository(),
         password_reset_token_repository=PasswordResetTokenRepository(),
+        revoked_refresh_token_repository=RevokedRefreshTokenRepository(),
         event_publisher=NoopAuthEventPublisher(),
         password_pepper=settings.password_pepper,
     )

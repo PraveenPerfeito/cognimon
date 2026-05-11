@@ -137,6 +137,12 @@ async def test_password_reset_request_creates_token_for_active_user(client, app)
         json={
             "email": "reset-me@cognimon.dev",
             "display_name": "Reset Me",
+async def test_logout_revokes_refresh_token(client):
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "logout@cognimon.dev",
+            "display_name": "Logout User",
             "password": "StrongPass123",
         },
     )
@@ -176,6 +182,28 @@ async def test_password_reset_request_is_neutral_for_missing_user(client, app):
         result = await session.execute(select(PasswordResetToken))
         reset_tokens = list(result.scalars().all())
         assert reset_tokens == []
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "logout@cognimon.dev",
+            "password": "StrongPass123",
+        },
+    )
+    refresh_token = login_response.json()["refresh_token"]
+
+    logout_response = await client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": refresh_token},
+    )
+    assert logout_response.status_code == 200
+    assert logout_response.json()["detail"] == "Refresh token revoked."
+
+    refresh_response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh_response.status_code == 401
+    assert refresh_response.json()["detail"] == "Refresh token has been revoked."
 
 
 @pytest.mark.asyncio

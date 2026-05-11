@@ -33,6 +33,8 @@ class RefreshTokenRequest(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
+class LogoutRequest(BaseModel):
+    refresh_token: str = Field(min_length=32)
 
 
 class TokenPairResponse(BaseModel):
