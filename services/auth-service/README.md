@@ -44,6 +44,7 @@ uvicorn app.main:app --reload --port 8080
 
 Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks request counts and request duration by method, route path, and status code.
 
+Baseline Prometheus Operator alert rules for auth-service can be applied from `monitoring/auth-service/`.
 If your cluster runs Prometheus Operator, a baseline `ServiceMonitor` for auth-service can be applied from `monitoring/auth-service/`.
 
 ## Password Hashing Configuration
@@ -72,12 +73,17 @@ The repository includes an `auth-service-ci` GitHub Actions workflow that runs R
 
 ## Monitoring
 
+Apply the baseline alert rules with:
 Apply the baseline Prometheus Operator monitor with:
 
 ```bash
 kubectl apply -k monitoring/auth-service
 ```
 
+The bundled `PrometheusRule` includes:
+
+- `AuthServiceHigh5xxRate`
+- `AuthServicePodsUnavailable`
 The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposing a port named `http`.
 
 ## Follow-up PRs
