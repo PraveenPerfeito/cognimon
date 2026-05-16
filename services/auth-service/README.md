@@ -12,6 +12,8 @@ Password reset is split into request and confirm steps. Reset requests store has
 
 Refresh tokens can also be revoked through logout, and revoked refresh token IDs are stored in the auth-service database so replayed logout tokens cannot mint new access tokens.
 
+User registration events can be published through a configurable backend. The default backend writes structured registration events to the service logs, which gives us a lightweight domain-event trail before a broker-backed publisher lands in a later PR.
+
 ## Endpoints
 
 - `POST /api/v1/auth/register`
@@ -43,6 +45,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
 - `AUTH_SERVICE_METRICS_ENABLED`
+- `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 
 ## Metrics
 
@@ -109,7 +112,7 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 ## Follow-up PRs
 
 1. Add refresh token cleanup for expired revocations.
-2. Publish password reset request events to a real broker.
+2. Publish auth events to a real broker.
 3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add Grafana dashboards for auth-service metrics.
