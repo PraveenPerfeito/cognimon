@@ -90,6 +90,8 @@ Apply them with:
 kubectl apply -k kubernetes/auth-service
 ```
 
+The bundle now includes a baseline ingress resource that routes `api.cognimon.dev` to the `auth-service` Kubernetes `Service`. Override the hostname or ingress class to match your cluster conventions before production rollout.
+
 Before applying, create a secret named `auth-service-secrets` with at least:
 
 - `AUTH_SERVICE_DATABASE_URL`
