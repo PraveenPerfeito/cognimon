@@ -8,7 +8,8 @@ Passwords are hashed with Argon2 through `pwdlib`, and the service can optionall
 
 Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
 
-Password reset is split into incremental steps. This service now accepts reset requests and stores hashed reset tokens with expiry while returning a neutral response that does not disclose whether an account exists.
+Password reset is split into request and confirm steps. Reset requests store hashed reset tokens with expiry, and confirmation consumes the token after the password has been updated. The request endpoint also returns a neutral response so account existence is not disclosed.
+
 Refresh tokens can also be revoked through logout, and revoked refresh token IDs are stored in the auth-service database so replayed logout tokens cannot mint new access tokens.
 
 ## Endpoints
@@ -17,6 +18,7 @@ Refresh tokens can also be revoked through logout, and revoked refresh token IDs
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/password-reset/request`
+- `POST /api/v1/auth/password-reset/confirm`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/users/me`
 - `GET /api/v1/users/admin`
@@ -47,6 +49,7 @@ uvicorn app.main:app --reload --port 8080
 Prometheus metrics are exposed at `GET /api/v1/metrics`. The service tracks request counts and request duration by method, route path, and status code.
 
 Baseline Prometheus Operator alert rules for auth-service can be applied from `monitoring/auth-service/`.
+
 If your cluster runs Prometheus Operator, a baseline `ServiceMonitor` for auth-service can be applied from `monitoring/auth-service/`.
 
 ## Password Hashing Configuration
@@ -91,8 +94,7 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 ## Monitoring
 
-Apply the baseline alert rules with:
-Apply the baseline Prometheus Operator monitor with:
+Apply the baseline alert rules and Prometheus Operator monitor with:
 
 ```bash
 kubectl apply -k monitoring/auth-service
@@ -107,7 +109,7 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 ## Follow-up PRs
 
 1. Add refresh token cleanup for expired revocations.
-2. Publish auth domain events to a real broker.
-3. Add password reset confirmation endpoint.
+2. Publish password reset request events to a real broker.
+3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add Grafana dashboards for auth-service metrics.
