@@ -95,9 +95,10 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 - `AUTH_SERVICE_DATABASE_URL`
 - `AUTH_SERVICE_JWT_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
+
 ## Monitoring
 
-Apply the baseline alert rules and Prometheus Operator monitor with:
+Apply the baseline alert rules, Prometheus Operator monitor, and Grafana dashboard with:
 
 ```bash
 kubectl apply -k monitoring/auth-service
@@ -107,6 +108,9 @@ The bundled `PrometheusRule` includes:
 
 - `AuthServiceHigh5xxRate`
 - `AuthServicePodsUnavailable`
+
+The bundled Grafana dashboard is provided through a `ConfigMap` labeled with `grafana_dashboard: "1"`.
+
 The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposing a port named `http`.
 
 ## Follow-up PRs
@@ -115,4 +119,4 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 2. Publish auth events to a real broker.
 3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
-5. Add Grafana dashboards for auth-service metrics.
+5. Add recording rules for auth-service SLOs.
