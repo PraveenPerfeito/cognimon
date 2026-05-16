@@ -5,8 +5,9 @@ from app.api.deps import get_auth_service, get_session, get_settings
 from app.core.config import Settings
 from app.schemas.auth import (
     LoginRequest,
-    PasswordResetRequest,
     LogoutRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RefreshTokenRequest,
     RegisterRequest,
     TokenPairResponse,
@@ -55,9 +56,6 @@ async def login_user(
 )
 async def request_password_reset(
     payload: PasswordResetRequest,
-@router.post("/logout", response_model=MessageResponse)
-async def logout_user(
-    payload: LogoutRequest,
     session: AsyncSession = Depends(get_session),
     auth_service: AuthService = Depends(get_auth_service),
     settings: Settings = Depends(get_settings),
@@ -66,6 +64,25 @@ async def logout_user(
     return MessageResponse(
         detail="If an active account exists for that email, a reset token has been issued."
     )
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> MessageResponse:
+    await auth_service.confirm_password_reset(session, payload)
+    return MessageResponse(detail="Password reset completed successfully.")
+
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout_user(
+    payload: LogoutRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> MessageResponse:
     await auth_service.revoke_refresh_token(session, payload.refresh_token, settings)
     return MessageResponse(detail="Refresh token revoked.")
 
@@ -88,4 +105,3 @@ async def refresh_user_token(
         expires_in=settings.access_token_expire_minutes * 60,
         refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
-

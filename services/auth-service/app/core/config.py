@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     refresh_token_secret: str = ""
     refresh_token_expire_days: int = 14
     metrics_enabled: bool = True
+    event_publisher_backend: Literal["noop", "log"] = "log"
     password_pepper: str = ""
     access_token_expire_minutes: int = 60
     password_reset_token_expire_minutes: int = 30

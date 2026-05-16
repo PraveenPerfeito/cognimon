@@ -18,7 +18,11 @@ from app.messaging.contracts import AuthEventPublisher, UserRegisteredEvent
 from app.repositories.password_reset_tokens import PasswordResetTokenRepository
 from app.repositories.revoked_refresh_tokens import RevokedRefreshTokenRepository
 from app.repositories.users import UserRepository
-from app.schemas.auth import PasswordResetRequest, RegisterRequest
+from app.schemas.auth import (
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    RegisterRequest,
+)
 
 
 class AuthService:
@@ -134,6 +138,39 @@ class AuthService:
             token_hash=hash_password_reset_token(reset_token),
             expires_at=datetime.now(UTC)
             + timedelta(minutes=settings.password_reset_token_expire_minutes),
+        )
+
+    async def confirm_password_reset(
+        self,
+        session: AsyncSession,
+        payload: PasswordResetConfirmRequest,
+    ) -> User:
+        password_reset_token = await self.password_reset_token_repository.get_by_token_hash(
+            session,
+            hash_password_reset_token(payload.token),
+        )
+        if password_reset_token is None:
+            raise AuthenticationError("Invalid or expired password reset token.")
+        if password_reset_token.consumed_at is not None:
+            raise AuthenticationError("Invalid or expired password reset token.")
+        expires_at = password_reset_token.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= datetime.now(UTC):
+            raise AuthenticationError("Invalid or expired password reset token.")
+
+        user = await self.user_repository.get_by_id(session, password_reset_token.user_id)
+        if user is None or not user.is_active:
+            raise AuthenticationError("User could not be authenticated.")
+
+        await self.user_repository.update_password(
+            session,
+            user,
+            password_hash=hash_password(payload.new_password, pepper=self.password_pepper),
+        )
+        await self.password_reset_token_repository.consume_token(session, password_reset_token)
+        return user
+
     async def revoke_refresh_token(
         self,
         session: AsyncSession,
@@ -152,4 +189,3 @@ class AuthService:
             user_id=claims.subject,
             expires_at=datetime.fromtimestamp(claims.expires_at, tz=UTC),
         )
-

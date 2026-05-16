@@ -8,9 +8,11 @@ Passwords are hashed with Argon2 through `pwdlib`, and the service can optionall
 
 Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
 
-Password reset is split into incremental steps. This service now accepts reset requests and stores hashed reset tokens with expiry while returning a neutral response that does not disclose whether an account exists.
+Password reset is split into request and confirm steps. Reset requests store hashed reset tokens with expiry, and confirmation consumes the token after the password has been updated. The request endpoint also returns a neutral response so account existence is not disclosed.
 
 Refresh tokens can also be revoked through logout, and revoked refresh token IDs are stored in the auth-service database so replayed logout tokens cannot mint new access tokens.
+
+User registration events can be published through a configurable backend. The default backend writes structured registration events to the service logs, which gives us a lightweight domain-event trail before a broker-backed publisher lands in a later PR.
 
 ## Endpoints
 
@@ -18,6 +20,7 @@ Refresh tokens can also be revoked through logout, and revoked refresh token IDs
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/password-reset/request`
+- `POST /api/v1/auth/password-reset/confirm`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/users/me`
 - `GET /api/v1/users/admin`
@@ -42,6 +45,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
 - `AUTH_SERVICE_METRICS_ENABLED`
+- `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 
 ## Metrics
 
@@ -112,7 +116,7 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 ## Follow-up PRs
 
 1. Add refresh token cleanup for expired revocations.
-2. Publish auth domain events to a real broker.
-3. Add password reset confirmation endpoint.
+2. Publish auth events to a real broker.
+3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add recording rules for auth-service SLOs.
