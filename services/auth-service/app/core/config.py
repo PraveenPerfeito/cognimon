@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     project_name: str = "cognimon-auth-service"
+    service_version: str = "0.1.0"
     environment: Literal["local", "development", "staging", "production", "test"] = "local"
     api_v1_prefix: str = "/api/v1"
     host: str = "0.0.0.0"

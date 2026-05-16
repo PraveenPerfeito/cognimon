@@ -5,8 +5,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 
 
-def test_alembic_upgrade_creates_users_and_password_reset_token_tables() -> None:
-def test_alembic_upgrade_creates_users_and_revoked_refresh_token_tables() -> None:
+def test_alembic_upgrade_creates_auth_tables() -> None:
     service_root = Path(__file__).resolve().parent.parent
     database_path = service_root / "tests" / "auth-service-migrations.db"
     if database_path.exists():

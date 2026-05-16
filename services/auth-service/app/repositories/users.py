@@ -49,7 +49,18 @@ class UserRepository:
         await session.refresh(user)
         return user
 
+    async def update_password(
+        self,
+        session: AsyncSession,
+        user: User,
+        *,
+        password_hash: str,
+    ) -> User:
+        user.password_hash = password_hash
+        await session.commit()
+        await session.refresh(user)
+        return user
+
     async def list_users(self, session: AsyncSession) -> list[User]:
         result = await session.execute(select(User).order_by(User.created_at.desc()))
         return list(result.scalars().all())
-

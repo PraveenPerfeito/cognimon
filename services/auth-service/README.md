@@ -24,6 +24,8 @@ Refresh tokens can also be revoked through logout, and revoked refresh token IDs
 - `GET /api/v1/health/live`
 - `GET /api/v1/health/ready`
 
+The health endpoints now include service name, deployment environment, and service version, which makes them more useful for cluster diagnostics and rollout checks.
+
 ## Local Run
 
 ```bash
@@ -40,6 +42,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_SCHEME`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
+- `AUTH_SERVICE_SERVICE_VERSION`
 - `AUTH_SERVICE_METRICS_ENABLED`
 
 ## Metrics
