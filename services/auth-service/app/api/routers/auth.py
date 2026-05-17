@@ -3,7 +3,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_auth_service, get_session, get_settings
 from app.core.config import Settings
-from app.schemas.auth import AccessTokenResponse, LoginRequest, RegisterRequest
+from app.schemas.auth import (
+    LoginRequest,
+    LogoutRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenPairResponse,
+)
+from app.schemas.common import MessageResponse
 from app.schemas.user import UserProfileResponse
 from app.services.auth_service import AuthService
 
@@ -24,17 +33,75 @@ async def register_user(
     return UserProfileResponse.model_validate(user)
 
 
-@router.post("/login", response_model=AccessTokenResponse)
+@router.post("/login", response_model=TokenPairResponse)
 async def login_user(
     payload: LoginRequest,
     session: AsyncSession = Depends(get_session),
     auth_service: AuthService = Depends(get_auth_service),
     settings: Settings = Depends(get_settings),
-) -> AccessTokenResponse:
+) -> TokenPairResponse:
     user = await auth_service.authenticate_user(session, payload.email, payload.password)
-    token = auth_service.issue_access_token(user, settings)
-    return AccessTokenResponse(
-        access_token=token,
+    return TokenPairResponse(
+        access_token=auth_service.issue_access_token(user, settings),
+        refresh_token=auth_service.issue_refresh_token(user, settings),
         expires_in=settings.access_token_expire_minutes * 60,
+        refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 
+
+@router.post(
+    "/password-reset/request",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_password_reset(
+    payload: PasswordResetRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> MessageResponse:
+    await auth_service.request_password_reset(session, payload, settings)
+    return MessageResponse(
+        detail="If an active account exists for that email, a reset token has been issued."
+    )
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> MessageResponse:
+    await auth_service.confirm_password_reset(session, payload)
+    return MessageResponse(detail="Password reset completed successfully.")
+
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout_user(
+    payload: LogoutRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> MessageResponse:
+    await auth_service.revoke_refresh_token(session, payload.refresh_token, settings)
+    return MessageResponse(detail="Refresh token revoked.")
+
+
+@router.post("/refresh", response_model=TokenPairResponse)
+async def refresh_user_token(
+    payload: RefreshTokenRequest,
+    session: AsyncSession = Depends(get_session),
+    auth_service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
+) -> TokenPairResponse:
+    user = await auth_service.authenticate_refresh_token(
+        session,
+        payload.refresh_token,
+        settings,
+    )
+    return TokenPairResponse(
+        access_token=auth_service.issue_access_token(user, settings),
+        refresh_token=auth_service.issue_refresh_token(user, settings),
+        expires_in=settings.access_token_expire_minutes * 60,
+        refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
+    )

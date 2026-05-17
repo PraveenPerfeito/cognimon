@@ -5,7 +5,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 
 
-def test_alembic_upgrade_creates_users_table() -> None:
+def test_alembic_upgrade_creates_auth_tables() -> None:
     service_root = Path(__file__).resolve().parent.parent
     database_path = service_root / "tests" / "auth-service-migrations.db"
     if database_path.exists():
@@ -23,8 +23,26 @@ def test_alembic_upgrade_creates_users_table() -> None:
             inspector = inspect(engine)
 
             assert "users" in inspector.get_table_names()
+            assert "password_reset_tokens" in inspector.get_table_names()
             column_names = {column["name"] for column in inspector.get_columns("users")}
             assert {"id", "email", "display_name", "password_hash", "role"} <= column_names
+            reset_column_names = {
+                column["name"] for column in inspector.get_columns("password_reset_tokens")
+            }
+            assert {
+                "id",
+                "user_id",
+                "token_hash",
+                "expires_at",
+                "consumed_at",
+            } <= reset_column_names
+            assert "revoked_refresh_tokens" in inspector.get_table_names()
+            column_names = {column["name"] for column in inspector.get_columns("users")}
+            assert {"id", "email", "display_name", "password_hash", "role"} <= column_names
+            revoked_column_names = {
+                column["name"] for column in inspector.get_columns("revoked_refresh_tokens")
+            }
+            assert {"token_id", "user_id", "expires_at", "revoked_at"} <= revoked_column_names
         finally:
             engine.dispose()
     finally:

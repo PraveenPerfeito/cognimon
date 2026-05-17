@@ -6,7 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.errors import AuthenticationError, AuthorizationError
 from app.db.models import User, UserRole
+from app.messaging.contracts import AuthEventPublisher
+from app.messaging.log import LoggingAuthEventPublisher
 from app.messaging.noop import NoopAuthEventPublisher
+from app.repositories.password_reset_tokens import PasswordResetTokenRepository
+from app.repositories.revoked_refresh_tokens import RevokedRefreshTokenRepository
 from app.repositories.users import UserRepository
 from app.services.auth_service import AuthService
 
@@ -21,10 +25,18 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
         yield session
 
 
+def build_auth_event_publisher(settings: Settings) -> AuthEventPublisher:
+    if settings.event_publisher_backend == "noop":
+        return NoopAuthEventPublisher()
+    return LoggingAuthEventPublisher()
+
+
 def get_auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
     return AuthService(
         user_repository=UserRepository(),
-        event_publisher=NoopAuthEventPublisher(),
+        password_reset_token_repository=PasswordResetTokenRepository(),
+        revoked_refresh_token_repository=RevokedRefreshTokenRepository(),
+        event_publisher=build_auth_event_publisher(settings),
         password_pepper=settings.password_pepper,
         audit_log_enabled=settings.audit_log_enabled,
     )

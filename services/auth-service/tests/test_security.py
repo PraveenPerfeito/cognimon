@@ -1,7 +1,16 @@
+import pytest
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
-from app.core.security import hash_password, verify_and_rehash_password
+from app.core.errors import AuthenticationError
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_access_token,
+    decode_refresh_token,
+    hash_password,
+    verify_and_rehash_password,
+)
 
 
 def test_password_hash_uses_configured_pepper() -> None:
@@ -48,3 +57,41 @@ def test_password_verify_supports_transition_from_unpeppered_hash() -> None:
     assert is_valid is True
     assert upgraded_hash is not None
     assert upgraded_hash != legacy_hash
+
+
+def test_refresh_token_decode_rejects_access_token() -> None:
+    token_secret = "test-secret-key-with-32-characters"
+    access_token = create_access_token(
+        subject="user-123",
+        email="learner@cognimon.dev",
+        role="learner",
+        secret=token_secret,
+        algorithm="HS256",
+        expires_in_minutes=60,
+    )
+
+    with pytest.raises(AuthenticationError, match="Invalid or expired refresh token."):
+        decode_refresh_token(
+            token=access_token,
+            secret=token_secret,
+            algorithm="HS256",
+        )
+
+
+def test_access_token_decode_rejects_refresh_token() -> None:
+    token_secret = "test-secret-key-with-32-characters"
+    refresh_token = create_refresh_token(
+        subject="user-123",
+        email="learner@cognimon.dev",
+        role="learner",
+        secret=token_secret,
+        algorithm="HS256",
+        expires_in_days=14,
+    )
+
+    with pytest.raises(AuthenticationError, match="Invalid or expired access token."):
+        decode_access_token(
+            token=refresh_token,
+            secret=token_secret,
+            algorithm="HS256",
+        )

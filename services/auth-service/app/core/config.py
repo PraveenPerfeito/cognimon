@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     project_name: str = "cognimon-auth-service"
+    service_version: str = "0.1.0"
     environment: Literal["local", "development", "staging", "production", "test"] = "local"
     api_v1_prefix: str = "/api/v1"
     host: str = "0.0.0.0"
@@ -25,9 +26,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_header_name: str = "Authorization"
     jwt_scheme: str = "Bearer"
+    refresh_token_secret: str = ""
+    refresh_token_expire_days: int = 14
     metrics_enabled: bool = True
+    event_publisher_backend: Literal["noop", "log"] = "log"
     password_pepper: str = ""
     access_token_expire_minutes: int = 60
+    password_reset_token_expire_minutes: int = 30
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     bootstrap_schema: bool = False
 
