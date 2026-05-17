@@ -23,6 +23,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: /api/v1/metrics
     spec:
+      serviceAccountName: auth-service
       containers:
         - name: auth-service
           image: ghcr.io/praveenperfeito/cognimon/auth-service:latest

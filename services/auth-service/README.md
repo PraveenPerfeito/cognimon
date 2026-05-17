@@ -98,6 +98,8 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 - `AUTH_SERVICE_JWT_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 
+Auth-service pods run with a dedicated Kubernetes `ServiceAccount` named `auth-service`.
+
 ## Monitoring
 
 Apply the baseline alert rules, Prometheus Operator monitor, and Grafana dashboard with:
