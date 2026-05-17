@@ -142,3 +142,7 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
 5. Add recording rules for auth-service SLOs.
+
+## Operations
+
+Auth incident and recovery steps are documented in `docs/auth-service-runbook.md`.
