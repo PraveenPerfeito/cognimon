@@ -64,4 +64,3 @@ class UserRepository:
     async def list_users(self, session: AsyncSession) -> list[User]:
         result = await session.execute(select(User).order_by(User.created_at.desc()))
         return list(result.scalars().all())
-

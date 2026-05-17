@@ -14,11 +14,13 @@ class Settings(BaseSettings):
     )
 
     project_name: str = "cognimon-auth-service"
+    service_version: str = "0.1.0"
     environment: Literal["local", "development", "staging", "production", "test"] = "local"
     api_v1_prefix: str = "/api/v1"
     host: str = "0.0.0.0"
     port: int = 8080
     log_level: str = "INFO"
+    audit_log_enabled: bool = True
     database_url: str = "postgresql+asyncpg://brainmon:brainmon@localhost:5432/brainmon_auth"
     jwt_secret: str = "change-me-before-production-32-chars"
     jwt_algorithm: str = "HS256"

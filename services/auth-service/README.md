@@ -6,6 +6,7 @@ Incoming bearer tokens are validated in request middleware before protected rout
 
 Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
 
+The service also emits structured auth audit logs for registration and login outcomes so security-sensitive identity flows are observable without querying application state.
 Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
 
 Password reset is split into request and confirm steps. Reset requests store hashed reset tokens with expiry, and confirmation consumes the token after the password has been updated. The request endpoint also returns a neutral response so account existence is not disclosed.
@@ -28,6 +29,8 @@ User registration events can be published through a configurable backend. The de
 - `GET /api/v1/health/live`
 - `GET /api/v1/health/ready`
 
+The health endpoints now include service name, deployment environment, and service version, which makes them more useful for cluster diagnostics and rollout checks.
+
 ## Local Run
 
 ```bash
@@ -44,7 +47,9 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_SCHEME`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
+- `AUTH_SERVICE_SERVICE_VERSION`
 - `AUTH_SERVICE_METRICS_ENABLED`
+- `AUTH_SERVICE_AUDIT_LOG_ENABLED`
 - `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 
 ## Metrics
@@ -59,6 +64,15 @@ If your cluster runs Prometheus Operator, a baseline `ServiceMonitor` for auth-s
 
 - `AUTH_SERVICE_PASSWORD_PEPPER`
 - `AUTH_SERVICE_PASSWORD_RESET_TOKEN_EXPIRE_MINUTES`
+
+## Audit Logging
+
+When `AUTH_SERVICE_AUDIT_LOG_ENABLED=true`, the service emits structured `app.audit` log entries for:
+
+- successful registrations
+- duplicate registration attempts
+- successful logins
+- failed login attempts
 
 ## Testing
 
@@ -90,6 +104,7 @@ Apply them with:
 kubectl apply -k kubernetes/auth-service
 ```
 
+The bundle now includes a baseline ingress resource that routes `api.cognimon.dev` to the `auth-service` Kubernetes `Service`. Override the hostname or ingress class to match your cluster conventions before production rollout.
 The bundle includes a baseline `NetworkPolicy` that allows ingress from `ingress-nginx` and `monitoring` namespaces, plus egress to a `database` namespace on PostgreSQL and DNS through `kube-system`.
 
 The bundle also includes a baseline `PodDisruptionBudget` so voluntary disruptions keep at least one auth-service pod available.
@@ -99,6 +114,9 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 - `AUTH_SERVICE_DATABASE_URL`
 - `AUTH_SERVICE_JWT_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
+- `AUTH_SERVICE_PASSWORD_PEPPER`
+
+A reusable template is available at `kubernetes/auth-service/secret-template.yaml`, with a flat env-style companion file at `kubernetes/auth-service/secret-template.env` for teams that prefer generating the secret from environment variables.
 
 ## Monitoring
 

@@ -38,6 +38,7 @@ def get_auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
         revoked_refresh_token_repository=RevokedRefreshTokenRepository(),
         event_publisher=build_auth_event_publisher(settings),
         password_pepper=settings.password_pepper,
+        audit_log_enabled=settings.audit_log_enabled,
     )
 
 
