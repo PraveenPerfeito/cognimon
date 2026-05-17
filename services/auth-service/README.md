@@ -6,6 +6,7 @@ Incoming bearer tokens are validated in request middleware before protected rout
 
 Passwords are hashed with Argon2 through `pwdlib`, and the service can optionally apply an environment-driven pepper while transparently upgrading legacy unpeppered hashes on successful login.
 
+The service also emits structured auth audit logs for registration and login outcomes so security-sensitive identity flows are observable without querying application state.
 Access tokens and refresh tokens are now issued separately, with refresh tokens accepted only by the refresh endpoint so protected APIs cannot be called with the wrong token type.
 
 Password reset is split into request and confirm steps. Reset requests store hashed reset tokens with expiry, and confirmation consumes the token after the password has been updated. The request endpoint also returns a neutral response so account existence is not disclosed.
@@ -48,6 +49,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
 - `AUTH_SERVICE_SERVICE_VERSION`
 - `AUTH_SERVICE_METRICS_ENABLED`
+- `AUTH_SERVICE_AUDIT_LOG_ENABLED`
 - `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 
 ## Metrics
@@ -62,6 +64,15 @@ If your cluster runs Prometheus Operator, a baseline `ServiceMonitor` for auth-s
 
 - `AUTH_SERVICE_PASSWORD_PEPPER`
 - `AUTH_SERVICE_PASSWORD_RESET_TOKEN_EXPIRE_MINUTES`
+
+## Audit Logging
+
+When `AUTH_SERVICE_AUDIT_LOG_ENABLED=true`, the service emits structured `app.audit` log entries for:
+
+- successful registrations
+- duplicate registration attempts
+- successful logins
+- failed login attempts
 
 ## Testing
 

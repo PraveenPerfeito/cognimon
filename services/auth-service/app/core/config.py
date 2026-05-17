@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8080
     log_level: str = "INFO"
+    audit_log_enabled: bool = True
     database_url: str = "postgresql+asyncpg://brainmon:brainmon@localhost:5432/brainmon_auth"
     jwt_secret: str = "change-me-before-production-32-chars"
     jwt_algorithm: str = "HS256"
