@@ -118,6 +118,8 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 
 A reusable template is available at `kubernetes/auth-service/secret-template.yaml`, with a flat env-style companion file at `kubernetes/auth-service/secret-template.env` for teams that prefer generating the secret from environment variables.
 
+Auth-service pods run with a dedicated Kubernetes `ServiceAccount` named `auth-service`.
+
 ## Monitoring
 
 Apply the baseline alert rules, Prometheus Operator monitor, and Grafana dashboard with:
