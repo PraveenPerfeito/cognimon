@@ -60,4 +60,3 @@ class TokenPairResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     refresh_expires_in: int
-

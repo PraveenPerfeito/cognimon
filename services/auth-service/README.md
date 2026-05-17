@@ -28,6 +28,8 @@ User registration events can be published through a configurable backend. The de
 - `GET /api/v1/health/live`
 - `GET /api/v1/health/ready`
 
+The health endpoints now include service name, deployment environment, and service version, which makes them more useful for cluster diagnostics and rollout checks.
+
 ## Local Run
 
 ```bash
@@ -44,6 +46,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_SCHEME`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
+- `AUTH_SERVICE_SERVICE_VERSION`
 - `AUTH_SERVICE_METRICS_ENABLED`
 - `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 

@@ -5,12 +5,22 @@ from app.schemas.common import HealthResponse
 router = APIRouter()
 
 
-@router.get("/live", response_model=HealthResponse)
-async def live() -> HealthResponse:
-    return HealthResponse(status="ok", service="cognimon-auth-service")
+def _build_health_response(request: Request, *, status: str) -> HealthResponse:
+    settings = request.app.state.settings
+    return HealthResponse(
+        status=status,
+        service=settings.project_name,
+        environment=settings.environment,
+        version=settings.service_version,
+    )
 
 
 @router.get("/ready", response_model=HealthResponse)
 async def ready(request: Request) -> HealthResponse:
     await request.app.state.db.check_connection()
-    return HealthResponse(status="ready", service="cognimon-auth-service")
+    return _build_health_response(request, status="ready")
+
+
+@router.get("/live", response_model=HealthResponse)
+async def live(request: Request) -> HealthResponse:
+    return _build_health_response(request, status="ok")
