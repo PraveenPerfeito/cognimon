@@ -100,6 +100,9 @@ Before applying, create a secret named `auth-service-secrets` with at least:
 - `AUTH_SERVICE_DATABASE_URL`
 - `AUTH_SERVICE_JWT_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
+- `AUTH_SERVICE_PASSWORD_PEPPER`
+
+A reusable template is available at `kubernetes/auth-service/secret-template.yaml`, with a flat env-style companion file at `kubernetes/auth-service/secret-template.env` for teams that prefer generating the secret from environment variables.
 
 ## Monitoring
 
