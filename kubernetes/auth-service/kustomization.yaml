@@ -4,5 +4,6 @@ resources:
   - deployment.yaml
   - service.yaml
   - hpa.yaml
+  - pod-disruption-budget.yaml
   - ingress.yaml
   - network-policy.yaml
