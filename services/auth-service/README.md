@@ -90,6 +90,8 @@ Apply them with:
 kubectl apply -k kubernetes/auth-service
 ```
 
+The bundle includes a baseline `NetworkPolicy` that allows ingress from `ingress-nginx` and `monitoring` namespaces, plus egress to a `database` namespace on PostgreSQL and DNS through `kube-system`.
+
 Before applying, create a secret named `auth-service-secrets` with at least:
 
 - `AUTH_SERVICE_DATABASE_URL`
