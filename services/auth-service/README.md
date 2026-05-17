@@ -28,6 +28,8 @@ User registration events can be published through a configurable backend. The de
 - `GET /api/v1/health/live`
 - `GET /api/v1/health/ready`
 
+The health endpoints now include service name, deployment environment, and service version, which makes them more useful for cluster diagnostics and rollout checks.
+
 ## Local Run
 
 ```bash
@@ -44,6 +46,7 @@ uvicorn app.main:app --reload --port 8080
 - `AUTH_SERVICE_JWT_SCHEME`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_EXPIRE_DAYS`
+- `AUTH_SERVICE_SERVICE_VERSION`
 - `AUTH_SERVICE_METRICS_ENABLED`
 - `AUTH_SERVICE_EVENT_PUBLISHER_BACKEND`
 
@@ -91,15 +94,20 @@ kubectl apply -k kubernetes/auth-service
 ```
 
 The bundle now includes a baseline ingress resource that routes `api.cognimon.dev` to the `auth-service` Kubernetes `Service`. Override the hostname or ingress class to match your cluster conventions before production rollout.
+The bundle includes a baseline `NetworkPolicy` that allows ingress from `ingress-nginx` and `monitoring` namespaces, plus egress to a `database` namespace on PostgreSQL and DNS through `kube-system`.
 
 Before applying, create a secret named `auth-service-secrets` with at least:
 
 - `AUTH_SERVICE_DATABASE_URL`
 - `AUTH_SERVICE_JWT_SECRET`
 - `AUTH_SERVICE_REFRESH_TOKEN_SECRET`
+- `AUTH_SERVICE_PASSWORD_PEPPER`
+
+A reusable template is available at `kubernetes/auth-service/secret-template.yaml`, with a flat env-style companion file at `kubernetes/auth-service/secret-template.env` for teams that prefer generating the secret from environment variables.
+
 ## Monitoring
 
-Apply the baseline alert rules and Prometheus Operator monitor with:
+Apply the baseline alert rules, Prometheus Operator monitor, and Grafana dashboard with:
 
 ```bash
 kubectl apply -k monitoring/auth-service
@@ -109,6 +117,9 @@ The bundled `PrometheusRule` includes:
 
 - `AuthServiceHigh5xxRate`
 - `AuthServicePodsUnavailable`
+
+The bundled Grafana dashboard is provided through a `ConfigMap` labeled with `grafana_dashboard: "1"`.
+
 The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposing a port named `http`.
 
 ## Follow-up PRs
@@ -117,4 +128,4 @@ The `ServiceMonitor` expects a Kubernetes `Service` named `auth-service` exposin
 2. Publish auth events to a real broker.
 3. Add password reset delivery via notification-service.
 4. Add PostgreSQL migration tooling and schema rollout jobs.
-5. Add Grafana dashboards for auth-service metrics.
+5. Add recording rules for auth-service SLOs.

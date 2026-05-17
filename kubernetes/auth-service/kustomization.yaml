@@ -5,3 +5,4 @@ resources:
   - service.yaml
   - hpa.yaml
   - ingress.yaml
+  - network-policy.yaml
